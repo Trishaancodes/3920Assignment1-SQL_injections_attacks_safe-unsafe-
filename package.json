@@ -26,6 +26,8 @@
     "express": "^5.1.0",
     "express-session": "^1.18.1",
     "joi": "^17.13.3",
-    "mongo-connect": "^0.0.6"
+    "mongo-connect": "^0.0.6",
+    "mongodb": "^6.21.0",
+    "mysql2": "^3.16.2"
   }
 }

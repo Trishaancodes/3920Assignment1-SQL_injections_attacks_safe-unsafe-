@@ -7,8 +7,6 @@ const session = require('express-session');
 const bcrypt = require('bcrypt');
 const MongoStore = require('connect-mongo');
 const { connection: sqlConnection } = require("./scripts/databaseSQL.js");
-console.log("sqlConnection is:", sqlConnection);
-console.log("typeof sqlConnection.query:", typeof sqlConnection.query);
 const Joi = require('joi');
 
 const sqlTable = 'CREATE TABLE IF NOT EXISTS users('
@@ -36,11 +34,8 @@ function logUsersTable(context) {
 sqlConnection.query(sqlTable,(err, result) => {
     if (err) throw err;
     console.log("✅ SQL Table created or already exists.");
-    logUsersTable("after table creation");
-
+     logUsersTable("after table creation");
 });
-
-
 
 const signupSchema = Joi.object({
     firstName: Joi.string().min(1).required(),
@@ -54,8 +49,9 @@ const signinSchema = Joi.object({
 });
 
 
-app.use('/static', express.static(path.join(__dirname, 'public')));
-app.use('/css', express.static(path.join(__dirname, '/public/css')));
+app.use('/static', express.static(path.join(__dirname, 'pages')));
+app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/scripts', express.static(path.join(__dirname, 'scripts')));
 app.use(express.urlencoded({ extended: true }));
 
@@ -103,53 +99,21 @@ app.get("/user", (req, res) => {
       
 
     // Serve public pages
-    app.get('/', (req, res) => {
-        res.render('index', {
-            title: "Welcome",
-            cssFile: 'index.css',
-            scripts: []
-        });
-    });
-    
-    app.get('/signIn', (req, res) => {
-        res.render('signIn', {
-            title: "Sign In",
-            cssFile: '',
-            scripts: ['authenticated.js']
-        });
-    });
-    
-    app.get('/signup', (req, res) => {
-        res.render('signUp', {
-            title: "Sign Up",
-            scripts: ['authenticated.js']
-        });
-    });
+    app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'pages/index.html')));
+    app.get('/signIn', (req, res) => res.sendFile(path.join(__dirname, 'pages/signIn.html')));
+    app.get('/signup', (req, res) => res.sendFile(path.join(__dirname, 'pages/signUp.html')));
 
     // Authenticated landing page
     app.get('/authenticated', (req, res) => {
-        if (!req.session.user){
-            return res.redirect('/signIn');
-        }
-        res.render('authenticated', {
-            title: 'Authenticated',
-            cssFile: 'authenticated.css',
-            scripts: ['authenticated.js'],
-            userName: req.session.user.firstName
-        });
+        if (!req.session.user) return res.redirect('/signIn');
+        res.sendFile(path.join(__dirname, 'pages/authenticated.html'));
     });
 
     // Members-only page
     app.get('/membersOnly', (req, res) => {
-        if (!req.session.user) return res.redirect('/');
-        res.render('membersOnly', {
-            title: 'Members Area',
-            cssFile: '',
-            scripts: ['membersOnly.js'],
-            images: ['dog1.jpg', 'dog2.jpg', 'dog3.jpeg']
-        });
+        if (!req.session.user) return res.redirect('/signIn');
+        res.sendFile(path.join(__dirname, 'pages/membersOnly.html'));
     });
-    
 
     // Signup logic
 app.post("/signup", async (req, res) => {
@@ -208,13 +172,12 @@ app.post("/signup", async (req, res) => {
 
     // Login logic
     app.post("/signIn", (req, res) => {
-          const email = req.body.email;
+        const email = req.body.email;
         const password = req.body.password;
 
   // 2) Fetch user from MySQL (need passwordHash!)
   sqlConnection.query(
-    "SELECT firstName, email, passwordHash FROM users WHERE email = ? LIMIT 1",
-    [email],
+    `SELECT firstName, email, passwordHash FROM users WHERE email = '${email}'`,
     async (err, results) => {
       if (err) {
         console.error("MySQL error:", err);
@@ -228,7 +191,6 @@ app.post("/signup", async (req, res) => {
       const user = results[0];
       console.log("👤 Login attempt for:", email);
       logUsersTable("during login");
-
 
       // 3) Compare password
       const match = await bcrypt.compare(password, user.passwordHash);
@@ -246,41 +208,6 @@ app.post("/signup", async (req, res) => {
 });
 
 
-    function isLoggedIn(req, res, next) {
-        if (!req.session.user) return res.redirect('/signIn');
-        next();
-    }
-    
-    async function isAdmin(req, res, next) {
-        if (!req.session.user) return res.redirect('/signIn');
-    
-        const user = await usersCollection.findOne({ email: req.session.user.email });
-        if (!user || user.user_type !== 'admin') {
-            return res.status(403).send("Forbidden: Admins only");
-        }
-        next();
-    }
-    app.get('/admin', isLoggedIn, isAdmin, async (req, res) => {
-        const users = await usersCollection.find().toArray();
-        res.render('admin', { 
-            title: 'Admin Panel', 
-            users, 
-            sessionUserEmail: req.session.user.email 
-        });
-    });
-    
-    app.post('/admin/promote/:email', isLoggedIn, isAdmin, async (req, res) => {
-        await usersCollection.updateOne({ email: req.params.email }, { $set: { user_type: 'admin' } });
-        res.redirect('/admin');
-    });
-    
-    app.post('/admin/demote/:email', isLoggedIn, isAdmin, async (req, res) => {
-        await usersCollection.updateOne({ email: req.params.email }, { $set: { user_type: 'user' } });
-        res.redirect('/admin');
-    });
-    
-    
-
     // Logout
     app.get('/logout', (req, res) => {
         req.session.destroy(err => {
@@ -292,11 +219,14 @@ app.post("/signup", async (req, res) => {
         });
     });
     app.use((req, res) => {
-        res.render('404')
-        });
-
+        res.status(404).send(`
+            <h1>404 - Page Not Found</h1>
+            <p>The page you're looking for doesn't exist.</p>
+            <a href="/">Return to Home</a>
+        `);
+    });
+    
 
     app.listen(port, () => {
         console.log(`✅ Server running on http://localhost:${port}`);
     });
-
