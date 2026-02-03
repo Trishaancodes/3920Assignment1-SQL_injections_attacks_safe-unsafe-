@@ -7,8 +7,6 @@ const session = require('express-session');
 const bcrypt = require('bcrypt');
 const MongoStore = require('connect-mongo');
 const { connection: sqlConnection } = require("./scripts/databaseSQL.js");
-console.log("sqlConnection is:", sqlConnection);
-console.log("typeof sqlConnection.query:", typeof sqlConnection.query);
 const Joi = require('joi');
 
 const sqlTable = 'CREATE TABLE IF NOT EXISTS users('
@@ -36,11 +34,8 @@ function logUsersTable(context) {
 sqlConnection.query(sqlTable,(err, result) => {
     if (err) throw err;
     console.log("✅ SQL Table created or already exists.");
-    logUsersTable("after table creation");
-
+     logUsersTable("after table creation");
 });
-
-
 
 const signupSchema = Joi.object({
     firstName: Joi.string().min(1).required(),
@@ -177,13 +172,12 @@ app.post("/signup", async (req, res) => {
 
     // Login logic
     app.post("/signIn", (req, res) => {
-          const email = req.body.email;
+        const email = req.body.email;
         const password = req.body.password;
 
   // 2) Fetch user from MySQL (need passwordHash!)
   sqlConnection.query(
-    "SELECT firstName, email, passwordHash FROM users WHERE email = ? LIMIT 1",
-    [email],
+    `SELECT firstName, email, passwordHash FROM users WHERE email = '${email}'`,
     async (err, results) => {
       if (err) {
         console.error("MySQL error:", err);
@@ -197,7 +191,6 @@ app.post("/signup", async (req, res) => {
       const user = results[0];
       console.log("👤 Login attempt for:", email);
       logUsersTable("during login");
-
 
       // 3) Compare password
       const match = await bcrypt.compare(password, user.passwordHash);
@@ -237,4 +230,3 @@ app.post("/signup", async (req, res) => {
     app.listen(port, () => {
         console.log(`✅ Server running on http://localhost:${port}`);
     });
-
