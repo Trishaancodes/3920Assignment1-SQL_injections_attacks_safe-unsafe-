@@ -54,9 +54,8 @@ const signinSchema = Joi.object({
 });
 
 
-app.use('/static', express.static(path.join(__dirname, 'pages')));
-app.use('/public', express.static(path.join(__dirname, 'public')));
-app.use('/css', express.static(path.join(__dirname, 'css')));
+app.use('/static', express.static(path.join(__dirname, 'public')));
+app.use('/css', express.static(path.join(__dirname, '/public/css')));
 app.use('/scripts', express.static(path.join(__dirname, 'scripts')));
 app.use(express.urlencoded({ extended: true }));
 
@@ -104,21 +103,53 @@ app.get("/user", (req, res) => {
       
 
     // Serve public pages
-    app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'pages/index.html')));
-    app.get('/signIn', (req, res) => res.sendFile(path.join(__dirname, 'pages/signIn.html')));
-    app.get('/signup', (req, res) => res.sendFile(path.join(__dirname, 'pages/signUp.html')));
+    app.get('/', (req, res) => {
+        res.render('index', {
+            title: "Welcome",
+            cssFile: 'index.css',
+            scripts: []
+        });
+    });
+    
+    app.get('/signIn', (req, res) => {
+        res.render('signIn', {
+            title: "Sign In",
+            cssFile: '',
+            scripts: ['authenticated.js']
+        });
+    });
+    
+    app.get('/signup', (req, res) => {
+        res.render('signUp', {
+            title: "Sign Up",
+            scripts: ['authenticated.js']
+        });
+    });
 
     // Authenticated landing page
     app.get('/authenticated', (req, res) => {
-        if (!req.session.user) return res.redirect('/signIn');
-        res.sendFile(path.join(__dirname, 'pages/authenticated.html'));
+        if (!req.session.user){
+            return res.redirect('/signIn');
+        }
+        res.render('authenticated', {
+            title: 'Authenticated',
+            cssFile: 'authenticated.css',
+            scripts: ['authenticated.js'],
+            userName: req.session.user.firstName
+        });
     });
 
     // Members-only page
     app.get('/membersOnly', (req, res) => {
-        if (!req.session.user) return res.redirect('/signIn');
-        res.sendFile(path.join(__dirname, 'pages/membersOnly.html'));
+        if (!req.session.user) return res.redirect('/');
+        res.render('membersOnly', {
+            title: 'Members Area',
+            cssFile: '',
+            scripts: ['membersOnly.js'],
+            images: ['dog1.jpg', 'dog2.jpg', 'dog3.jpeg']
+        });
     });
+    
 
     // Signup logic
 app.post("/signup", async (req, res) => {
@@ -215,6 +246,41 @@ app.post("/signup", async (req, res) => {
 });
 
 
+    function isLoggedIn(req, res, next) {
+        if (!req.session.user) return res.redirect('/signIn');
+        next();
+    }
+    
+    async function isAdmin(req, res, next) {
+        if (!req.session.user) return res.redirect('/signIn');
+    
+        const user = await usersCollection.findOne({ email: req.session.user.email });
+        if (!user || user.user_type !== 'admin') {
+            return res.status(403).send("Forbidden: Admins only");
+        }
+        next();
+    }
+    app.get('/admin', isLoggedIn, isAdmin, async (req, res) => {
+        const users = await usersCollection.find().toArray();
+        res.render('admin', { 
+            title: 'Admin Panel', 
+            users, 
+            sessionUserEmail: req.session.user.email 
+        });
+    });
+    
+    app.post('/admin/promote/:email', isLoggedIn, isAdmin, async (req, res) => {
+        await usersCollection.updateOne({ email: req.params.email }, { $set: { user_type: 'admin' } });
+        res.redirect('/admin');
+    });
+    
+    app.post('/admin/demote/:email', isLoggedIn, isAdmin, async (req, res) => {
+        await usersCollection.updateOne({ email: req.params.email }, { $set: { user_type: 'user' } });
+        res.redirect('/admin');
+    });
+    
+    
+
     // Logout
     app.get('/logout', (req, res) => {
         req.session.destroy(err => {
@@ -226,13 +292,9 @@ app.post("/signup", async (req, res) => {
         });
     });
     app.use((req, res) => {
-        res.status(404).send(`
-            <h1>404 - Page Not Found</h1>
-            <p>The page you're looking for doesn't exist.</p>
-            <a href="/">Return to Home</a>
-        `);
-    });
-    
+        res.render('404')
+        });
+
 
     app.listen(port, () => {
         console.log(`✅ Server running on http://localhost:${port}`);

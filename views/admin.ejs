@@ -1,0 +1,41 @@
+<%- include('templates/header', { title: 'Admin Panel', cssFile: '' }) %>
+
+<div class="d-flex flex-column min-vh-100">
+
+    <main class="flex-grow-1 container my-5">
+        <h2 class="text-center mb-4">Admin Panel</h2>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>First Name</th>
+                    <th>User Type</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% users.forEach(user => { %>
+                    <tr>
+                        <td><%= user.email %></td>
+                        <td><%= user.firstName %></td>
+                        <td><%= user.user_type || 'user' %></td>
+                        <td>
+                            <% if ((user.user_type !== 'admin') && (user.email !== sessionUserEmail)) { %>
+                                <form action="/admin/promote/<%= user.email %>" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-success">Promote to Admin</button>
+                                </form>
+                            <% } %>
+                            <% if ((user.user_type === 'admin') && (user.email !== sessionUserEmail)) { %>
+                                <form action="/admin/demote/<%= user.email %>" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-warning">Demote to User</button>
+                                </form>
+                            <% } %>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </main>
+
+    <%- include('templates/footer', { scripts: [] }) %>
+</div>

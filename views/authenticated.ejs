@@ -1,0 +1,22 @@
+<%- include('templates/header', { 
+    title: 'Authenticated', 
+    cssFile: '' 
+}) %>
+
+<div class="d-flex flex-column min-vh-100">
+
+    <!-- Main content -->
+    <main class="flex-grow-1 d-flex justify-content-center align-items-center bg-light">
+        <div class="bg-white shadow p-5 rounded text-center" style="min-width: 300px;">
+            <h2 class="mb-4">Welcome, <span><%= userName || "Guest" %></span>!</h2>
+            <p>You are successfully signed in.</p>
+            <div class="d-flex flex-column gap-2 mt-4">
+                <a href="/membersOnly" class="btn btn-primary w-100">Go to Members Only</a>
+                <a href="/logout" class="btn btn-danger w-100">Logout</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <%- include('templates/footer', { scripts: ['authenticated.js'] }) %>
+</div>
