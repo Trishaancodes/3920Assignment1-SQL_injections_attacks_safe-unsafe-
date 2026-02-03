@@ -32,7 +32,9 @@ function logUsersTable(context) {
 }
 
 sqlConnection.query(sqlTable,(err, result) => {
-    if (err) throw err;
+    if (err) {
+      console.error("unable to connect to sql",err.message);
+    };
     console.log("✅ SQL Table created or already exists.");
      logUsersTable("after table creation");
 });
