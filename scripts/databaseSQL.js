@@ -6,7 +6,7 @@ const connection = mysql.createConnection({
     user: process.env.SQLUSER,
     database: process.env.SQLDATABASE,
     password: process.env.SQLPASSWORD,
-    port: 61002,
+    port: process.env.SQLPORT,
     multipleStatements: true,
 });
 
