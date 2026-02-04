@@ -11,6 +11,8 @@ console.log("sqlConnection is:", sqlConnection);
 console.log("typeof sqlConnection.query:", typeof sqlConnection.query);
 const Joi = require('joi');
 
+const ROOT = path.join(__dirname, "..");
+
 const sqlTable = 'CREATE TABLE IF NOT EXISTS users('
 +    'id INT AUTO_INCREMENT PRIMARY KEY,'
 +   'firstName VARCHAR(255) NOT NULL,'
@@ -39,10 +41,7 @@ sqlConnection.query(sqlTable,(err, result) => {
     }
     console.log("✅ SQL Table created or already exists.");
     logUsersTable("after table creation");
-
 });
-
-
 
 const signupSchema = Joi.object({
     firstName: Joi.string().min(1).required(),
@@ -50,14 +49,12 @@ const signupSchema = Joi.object({
     password: Joi.string().min(6).required()
 });
 
-
-
-app.use('/static', express.static(path.join(__dirname, 'pages')));
-app.use('/public', express.static(path.join(__dirname, 'public')));
-app.use('/css', express.static(path.join(__dirname, 'css')));
-app.use('/scripts', express.static(path.join(__dirname, 'scripts')));
+// ✅ ONLY CHANGE: use ROOT instead of __dirname so it finds shared folders at project root
+app.use('/static', express.static(path.join(ROOT, 'pages')));
+app.use('/public', express.static(path.join(ROOT, 'public')));
+app.use('/css', express.static(path.join(ROOT, 'css')));
+app.use('/scripts', express.static(path.join(ROOT, 'scripts')));
 app.use(express.urlencoded({ extended: true }));
-
 
 app.use(session({
   secret: process.env.SECRET,
@@ -76,6 +73,7 @@ app.use(session({
     secure: false,                  // true only with HTTPS
   }
 }));
+
 app.get("/user", (req, res) => {
   if (!req.session.user?.email) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -98,27 +96,26 @@ app.get("/user", (req, res) => {
     }
   );
 });
-      
-      
 
-    // Serve public pages
-    app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'pages/index.html')));
-    app.get('/signIn', (req, res) => res.sendFile(path.join(__dirname, 'pages/signIn.html')));
-    app.get('/signup', (req, res) => res.sendFile(path.join(__dirname, 'pages/signUp.html')));
+// Serve public pages
+// ✅ ONLY CHANGE: use ROOT for sendFile paths
+app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'pages/index.html')));
+app.get('/signIn', (req, res) => res.sendFile(path.join(ROOT, 'pages/signIn.html')));
+app.get('/signup', (req, res) => res.sendFile(path.join(ROOT, 'pages/signUp.html')));
 
-    // Authenticated landing page
-    app.get('/authenticated', (req, res) => {
-        if (!req.session.user) return res.redirect('/signIn');
-        res.sendFile(path.join(__dirname, 'pages/authenticated.html'));
-    });
+// Authenticated landing page
+app.get('/authenticated', (req, res) => {
+  if (!req.session.user) return res.redirect('/signIn');
+  res.sendFile(path.join(ROOT, 'pages/authenticated.html'));
+});
 
-    // Members-only page
-    app.get('/membersOnly', (req, res) => {
-        if (!req.session.user) return res.redirect('/signIn');
-        res.sendFile(path.join(__dirname, 'pages/membersOnly.html'));
-    });
+// Members-only page
+app.get('/membersOnly', (req, res) => {
+  if (!req.session.user) return res.redirect('/signIn');
+  res.sendFile(path.join(ROOT, 'pages/membersOnly.html'));
+});
 
-    // Signup logic
+// Signup logic
 app.post("/signup", async (req, res) => {
   // 1) Validate body with Joi
   const { error, value } = signupSchema.validate(req.body, { abortEarly: false });
@@ -172,11 +169,10 @@ app.post("/signup", async (req, res) => {
   );
 });
 
-
-    // Login logic
-    app.post("/signIn", (req, res) => {
-          const email = req.body.email;
-        const password = req.body.password;
+// Login logic
+app.post("/signIn", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
 
   // 2) Fetch user from MySQL (need passwordHash!)
   sqlConnection.query(
@@ -196,7 +192,6 @@ app.post("/signup", async (req, res) => {
       console.log("👤 Login attempt for:", email);
       logUsersTable("during login");
 
-
       // 3) Compare password
       const match = await bcrypt.compare(password, user.passwordHash);
       if (!match) {
@@ -212,27 +207,25 @@ app.post("/signup", async (req, res) => {
   );
 });
 
+// Logout
+app.get('/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      return res.send("Error logging out.");
+    }
+    logUsersTable("after logout");
+    res.redirect('/');
+  });
+});
 
-    // Logout
-    app.get('/logout', (req, res) => {
-        req.session.destroy(err => {
-            if (err) {
-                return res.send("Error logging out.");
-            }
-            logUsersTable("after logout"); 
-            res.redirect('/');
-        });
-    });
-    app.use((req, res) => {
-        res.status(404).send(`
-            <h1>404 - Page Not Found</h1>
-            <p>The page you're looking for doesn't exist.</p>
-            <a href="/">Return to Home</a>
-        `);
-    });
-    
+app.use((req, res) => {
+  res.status(404).send(`
+    <h1>404 - Page Not Found</h1>
+    <p>The page you're looking for doesn't exist.</p>
+    <a href="/">Return to Home</a>
+  `);
+});
 
-    app.listen(port, () => {
-        console.log(`✅ Server running on http://localhost:${port}`);
-    });
-
+app.listen(port, () => {
+  console.log(`✅ Server running on http://localhost:${port}`);
+});
