@@ -6,7 +6,7 @@ const port = 3000;
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const MongoStore = require('connect-mongo');
-const { connection: sqlConnection } = require("./scripts/databaseSQL.js");
+const { connection: sqlConnection } = require("../scripts/databaseSQL.js");
 const Joi = require('joi');
 
 const sqlTable = 'CREATE TABLE IF NOT EXISTS users('

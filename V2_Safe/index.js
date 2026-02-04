@@ -6,7 +6,7 @@ const port = 3000;
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const MongoStore = require('connect-mongo');
-const { connection: sqlConnection } = require("./scripts/databaseSQL.js");
+const { connection: sqlConnection } = require("../scripts/databaseSQL.js");
 console.log("sqlConnection is:", sqlConnection);
 console.log("typeof sqlConnection.query:", typeof sqlConnection.query);
 const Joi = require('joi');
@@ -50,10 +50,6 @@ const signupSchema = Joi.object({
     password: Joi.string().min(6).required()
 });
 
-const signinSchema = Joi.object({
-    email: Joi.string().email().required(),
-    password: Joi.string().min(6).required()
-});
 
 
 app.use('/static', express.static(path.join(__dirname, 'pages')));
